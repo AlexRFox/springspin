@@ -3,11 +3,13 @@
 import pygame, sys, time
 
 class unit:
-    def __init__ (self, x, y, mass, vx=0, vy=0):
+    def __init__ (self, x, y, mass, player=False, vx=0, vy=0):
+        self.player = player
         self.pos = [x, y]
         self.mass = mass
         self.vel = vect (vx, vy)
         self.last_time = time.time ()
+        self.force = vect (0, 0)
 
 class vect:
     def __init__ (self, x, y):
@@ -36,9 +38,13 @@ pygame.display.set_caption ("Spring Spin")
 
 clock = pygame.time.Clock ()
 
-player = unit (50, 50, 1000)
+units = []
 
-diff = vect (0, 0)
+player = unit (CENTER[0], CENTER[1], 500, True)
+units.append (player)
+
+obj = unit (CENTER[0] + 100, CENTER[1] + 100, 1000)
+units.append (obj)
 
 def process_input ():
     for event in pygame.event.get ():
@@ -56,42 +62,52 @@ def process_input ():
                 player.vel.y = 0
         elif event.type == pygame.MOUSEMOTION:
             pos = pygame.mouse.get_pos ()
-            diff.x = float (pos[0] - CENTER[0])
-            diff.y = float (pos[1] - CENTER[1])
+            player.force.x = float (pos[0] - CENTER[0])
+            player.force.y = float (pos[1] - CENTER[1])
             pygame.mouse.set_pos (CENTER)
 
 def draw ():
     screen.fill (black)
 
-    pygame.draw.circle (screen, green, (int (player.pos[0]),
-                                        int (player.pos[1])), 20, 0)
+    for u in units:
+        pygame.draw.circle (screen, green, (int (u.pos[0]),
+                                            int (u.pos[1])), 20, 0)
 
     pygame.display.flip ()
 
 def phys_step ():
-    now = time.time ()
-    dt = now - player.last_time
+#add friction (toggable)
+#simulate spring correctly (right now only the non-players are effected)
 
-    player.vel.x += diff.x / player.mass
-    player.vel.y += diff.y / player.mass
+    for u in units:
+        now = time.time ()
+        dt = now - u.last_time
 
-    if abs (player.vel.x) > MAXVEL:
-        if player.vel.x > 0:
-            player.vel.x = MAXVEL
-        else:
-            player.vel.x = -MAXVEL
+        if u.player == False and pygame.mouse.get_pressed ()[0]:
+            u.force.x = float (player.pos[0] - u.pos[0])
+            u.force.y = float (player.pos[1] - u.pos[1])
 
-    if abs (player.vel.y) > MAXVEL:
-        if player.vel.y > 0:
-            player.vel.y = MAXVEL
-        else:
-            player.vel.y = -MAXVEL
+        u.vel.x += u.force.x / u.mass
+        u.vel.y += u.force.y / u.mass
 
-    player.pos[0] += dt * player.vel.x
-    player.pos[1] += dt * player.vel.y
+        if abs (u.vel.x) > MAXVEL:
+            if u.vel.x > 0:
+                u.vel.x = MAXVEL
+            else:
+                u.vel.x = -MAXVEL
+
+        if abs (u.vel.y) > MAXVEL:
+            if u.vel.y > 0:
+                u.vel.y = MAXVEL
+            else:
+                u.vel.y = -MAXVEL
+
+        u.pos[0] += dt * u.vel.x
+        u.pos[1] += dt * u.vel.y
 
 pygame.mouse.set_pos (CENTER)
 pygame.mouse.set_visible (False)
+
 while True:
     process_input ()
     phys_step ()

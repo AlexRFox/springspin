@@ -5,7 +5,7 @@ import pygame, sys, time
 WIDTH = 640
 HEIGHT = 480
 CENTER = (WIDTH / 2, HEIGHT / 2)
-MAXVEL = 50
+MAXVEL = 500
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -53,8 +53,8 @@ def process_input ():
                 player.vel.y = 0
         elif event.type == pygame.MOUSEMOTION:
             pos = pygame.mouse.get_pos ()
-            player.force.x = float (pos[0] - CENTER[0])
-            player.force.y = float (pos[1] - CENTER[1])
+            player.force.x = 500 * float (pos[0] - CENTER[0])
+            player.force.y = 500 * float (pos[1] - CENTER[1])
             pygame.mouse.set_pos (CENTER)
 
 def draw ():
@@ -70,17 +70,26 @@ def draw ():
     pygame.display.flip ()
 
 def apply_springs ():
-    for s in springs:
-        dx = float (s.node0.pos[0] - s.node1.pos[0])
-        dy = float (s.node0.pos[1] - s.node1.pos[1])
+    # for s in springs:
+    #     dx = float (s.node0.pos[0] - s.node1.pos[0])
+    #     dy = float (s.node0.pos[1] - s.node1.pos[1])
         
-        s.node0.force[0] -= dx * s.k
-        s.node0.force[1] -= dy * s.k
+    #     s.node0.force[0] -= dx * s.k
+    #     s.node0.force[1] -= dy * s.k
 
-        s.node1.force[0] += dx * s.k
-        s.node1.force[1] += dy * s.k
+    #     s.node1.force[0] += dx * s.k
+    #     s.node1.force[1] += dy * s.k
 
-        print "huh"
+    if pygame.mouse.get_pressed ()[0]:
+        dx = float (units[0].pos[0] - units[1].pos[0])
+        dy = float (units[0].pos[1] - units[1].pos[1])
+        
+        units[0].force.x -= dx * .1
+        units[0].force.y -= dy * .1
+
+        units[1].force.x += dx * .1
+        units[1].force.y += dy * .1
+
 
 def apply_forces ():
     global last_time
@@ -107,10 +116,10 @@ clock = pygame.time.Clock ()
 units = []
 springs = []
 
-player = unit (CENTER[0], CENTER[1], 500, GREEN, True)
+player = unit (CENTER[0], CENTER[1], 5000, GREEN, True)
 units.append (player)
 
-obj = unit (CENTER[0] + 100, CENTER[1] + 100, 1000, BLUE)
+obj = unit (CENTER[0] + 100, CENTER[1] + 100, 2000, BLUE)
 units.append (obj)
 
 pygame.mouse.set_pos (CENTER)

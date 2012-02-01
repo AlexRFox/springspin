@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-import pygame, sys, time
+import pygame, sys, time, math
 
 WIDTH = 640
 HEIGHT = 480
@@ -31,7 +31,7 @@ class unit:
         self.vel = vect (vx, vy)
         self.force = vect (0, 0)
 
-class spring:
+class link:
     def __init__ (self, node0, node1, k):
         self.node0 = node0
         self.node1 = node1
@@ -51,10 +51,15 @@ def process_input ():
                 player.pos[1] = CENTER[1]
                 player.vel.x = 0
                 player.vel.y = 0
+
+                obj.pos[0] = CENTER[0] - 100
+                obj.pos[1] = CENTER[1] - 200
+                obj.vel.x = 0
+                obj.vel.y = 0
         elif event.type == pygame.MOUSEMOTION:
             pos = pygame.mouse.get_pos ()
-            player.force.x = 500 * float (pos[0] - CENTER[0])
-            player.force.y = 500 * float (pos[1] - CENTER[1])
+            player.force.x = 2000 * float (pos[0] - CENTER[0])
+            player.force.y = 2000 * float (pos[1] - CENTER[1])
             pygame.mouse.set_pos (CENTER)
 
 def draw ():
@@ -63,13 +68,30 @@ def draw ():
     for u in units:
         pygame.draw.circle (screen, u.color, (int (u.pos[0]),
                                             int (u.pos[1])), 20, 0)
-    for s in springs:
+    if pygame.mouse.get_pressed ()[0]:
+        pygame.draw.line (screen, RED, units[0].pos, units[1].pos)
+
+    for s in links:
         pygame.draw.line (screen, RED, s.node0.pos, s.node1.pos)
 
 
     pygame.display.flip ()
 
-def apply_springs ():
+def rect_to_pol (x, y):
+    y = HEIGHT - y
+
+    r = math.hypot (x, y)
+    t = math.atan2 (y, x)
+
+    return (r, t)
+
+def pol_to_rect (r, t):
+    x = r * math.cos (t)
+    y = HEIGHT - r * math.sin (t)
+
+    return (x, y)
+
+def springs ():
     # for s in springs:
     #     dx = float (s.node0.pos[0] - s.node1.pos[0])
     #     dy = float (s.node0.pos[1] - s.node1.pos[1])
@@ -83,15 +105,19 @@ def apply_springs ():
     if pygame.mouse.get_pressed ()[0]:
         dx = float (units[0].pos[0] - units[1].pos[0])
         dy = float (units[0].pos[1] - units[1].pos[1])
+
+        r, t = rect_to_pol (dx, dy)
+        r -= 30
+        dx, dy = pol_to_rect (r, t)
         
-        units[0].force.x -= dx * .1
-        units[0].force.y -= dy * .1
 
-        units[1].force.x += dx * .1
-        units[1].force.y += dy * .1
+        units[0].force.x -= 100 * dx - units[0].vel.x
+        units[0].force.y -= 100 * dy - units[0].vel.y
 
+        units[1].force.x += 100 * dx - units[1].vel.x
+        units[1].force.y += 100 * dy - units[1].vel.y
 
-def apply_forces ():
+def movement ():
     global last_time
 
     now = time.time ()
@@ -105,6 +131,11 @@ def apply_forces ():
         u.pos[0] += dt * u.vel.x
         u.pos[1] += dt * u.vel.y
 
+def reset_forces ():
+    for u in units:
+        u.force.x = 0
+        u.force.y = 0
+
 pygame.init ()
 
 screen = pygame.display.set_mode (SIZE)
@@ -114,12 +145,12 @@ pygame.display.set_caption ("Spring Spin")
 clock = pygame.time.Clock ()
 
 units = []
-springs = []
+links = []
 
 player = unit (CENTER[0], CENTER[1], 5000, GREEN, True)
 units.append (player)
 
-obj = unit (CENTER[0] + 100, CENTER[1] + 100, 2000, BLUE)
+obj = unit (CENTER[0] - 100, CENTER[1] - 200, 500, BLUE, False, 0, 500)
 units.append (obj)
 
 pygame.mouse.set_pos (CENTER)
@@ -129,9 +160,11 @@ last_time = time.time ()
 
 while True:
     process_input ()
-    apply_springs ()
-    apply_forces ()
+    springs ()
+    movement ()
     draw ()
+
+    reset_forces ()
 
     clock.tick (60)
 

@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+# pyODE example 2: Connecting bodies with joints
+
 import sys, os, random, time
 from math import *
 from OpenGL.GL import *

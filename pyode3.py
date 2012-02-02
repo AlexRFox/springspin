@@ -1,5 +1,12 @@
 #! /usr/bin/env python
 
+# pyODE example 3: Collision detection
+
+# Originally by Matthias Baas.
+# Updated by Pierre Gay to work without pygame or cgkit.
+
+# Modified by Alex Willisson
+
 import sys, os, random, time
 from math import *
 from OpenGL.GL import *

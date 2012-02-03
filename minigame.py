@@ -42,8 +42,8 @@ def near_callback(args, geom1, geom2):
 
         if speed0 + speed1 > best_speed:
             best_speed = speed0 + speed1
-            flash = True
-    
+
+        flash = True
 
     world,contactgroup = args
     for c in contacts:

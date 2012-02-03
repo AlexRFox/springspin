@@ -57,6 +57,12 @@ def draw ():
 
     screen.fill ((0, 0, 0))
 
+    ctrls = smfont.render ("Move the mouse. Click. Collide. Esc to exit.",
+                         True, (255, 255, 255))
+    ctrlspos = ctrls.get_rect (left = 500)
+    ctrlspos.top = 750
+    screen.blit (ctrls, ctrlspos)
+
     for b in bodies:
         x, y, z = b.getPosition ()
         coords = ode_to_pygame (x, y)
@@ -77,9 +83,10 @@ def draw ():
     else:
         color = (255, 0, 0)
     flash = False
+
     text = font.render (str (best_speed), True, color)
-    textpos = text.get_rect (centerx=background.get_width () / 2)
-    textpos.top = 300
+    textpos = text.get_rect (centerx = background.get_width () / 2)
+    textpos.top = 50
     screen.blit (text, textpos)
 
     pygame.display.flip ()
@@ -87,10 +94,16 @@ def draw ():
 def process_input ():
     for event in pygame.event.get ():
         if event.type == pygame.QUIT:
+            print "Your highest speed collision was: " + str (best_speed)
+            if best_speed > 0:
+                print "Congratulations!"
             pygame.quit ()
             sys.exit ()
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
+                print "Your highest speed collision was: " + str (best_speed)
+                if best_speed > 0:
+                    print "Congratulations!"
                 pygame.quit ()
                 sys.exit ()
 def controls ():
@@ -127,6 +140,7 @@ pygame.mouse.set_visible (False)
 
 background = pygame.Surface (SIZE)
 font = pygame.font.Font (None, 36)
+smfont = pygame.font.Font (None, 20)
 
 world = ode.World ()
 space = ode.Space ()

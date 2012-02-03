@@ -35,10 +35,13 @@ def near_callback(args, geom1, geom2):
 
     if (geom1 == geoms[0] and geom2 == geoms[1]) \
             or (geom1 == geoms[1] and geom2 == geoms[0]):
-        vel = bodies[0].getLinearVel ()
-        speed = math.hypot (vel[0], vel[1])
-        if speed > best_speed:
-            best_speed = speed
+        vel0 = bodies[0].getLinearVel ()
+        speed0 = math.hypot (vel0[0], vel0[1])
+        vel1 = bodies[1].getLinearVel ()
+        speed1 = math.hypot (vel1[0], vel1[1])
+
+        if speed0 + speed1 > best_speed:
+            best_speed = speed0 + speed1
             flash = True
     
 

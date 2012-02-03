@@ -6,6 +6,7 @@ SCALE = 800
 
 WIDTH = SCALE
 HEIGHT = SCALE
+SIZE = (WIDTH, HEIGHT)
 
 CENTER = (WIDTH / 2, HEIGHT / 2)
 
@@ -28,7 +29,18 @@ def pol_to_rect (r, t):
     return (x, y)
 
 def near_callback(args, geom1, geom2):
+    global best_speed, flash
+
     contacts = ode.collide(geom1, geom2)
+
+    if (geom1 == geoms[0] and geom2 == geoms[1]) \
+            or (geom1 == geoms[1] and geom2 == geoms[0]):
+        vel = bodies[0].getLinearVel ()
+        speed = math.hypot (vel[0], vel[1])
+        if speed > best_speed:
+            best_speed = speed
+            flash = True
+    
 
     world,contactgroup = args
     for c in contacts:
@@ -38,6 +50,8 @@ def near_callback(args, geom1, geom2):
         j.attach(geom1.getBody(), geom2.getBody())
 
 def draw ():
+    global flash
+
     screen.fill ((0, 0, 0))
 
     for b in bodies:
@@ -55,6 +69,16 @@ def draw ():
         pygame.draw.line (screen, (0, 0, 255),
                           ode_to_pygame (x0, y0), ode_to_pygame (x1, y1))
         
+    if flash:
+        color = (0, 255, 0)
+    else:
+        color = (255, 0, 0)
+    flash = False
+    text = font.render (str (best_speed), True, color)
+    textpos = text.get_rect (centerx=background.get_width () / 2)
+    textpos.top = 300
+    screen.blit (text, textpos)
+
     pygame.display.flip ()
 
 def process_input ():
@@ -93,10 +117,13 @@ def controls ():
         bodies[1].addForce (uf)
 
 pygame.init ()
-screen = pygame.display.set_mode ((WIDTH, HEIGHT))
+screen = pygame.display.set_mode (SIZE)
 pygame.display.set_caption ("Spring Spin")
 pygame.mouse.set_pos (CENTER)
 pygame.mouse.set_visible (False)
+
+background = pygame.Surface (SIZE)
+font = pygame.font.Font (None, 36)
 
 world = ode.World ()
 space = ode.Space ()
@@ -137,6 +164,8 @@ geoms.append (geom)
 fps = 60
 dt = 1.0 / fps
 lasttime = time.time ()
+best_speed = 0
+flash = False
 
 while True:
     t = dt - (time.time () - lasttime)

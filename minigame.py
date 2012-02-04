@@ -47,7 +47,7 @@ def near_callback(args, geom1, geom2):
 
     world,contactgroup = args
     for c in contacts:
-        c.setBounce(0.2)
+        c.setBounce(0.4)
         c.setMu(5000)
         j = ode.ContactJoint(world, contactgroup, c)
         j.attach(geom1.getBody(), geom2.getBody())

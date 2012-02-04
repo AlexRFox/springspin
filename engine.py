@@ -9,6 +9,13 @@ HEIGHT = SCALE
 
 CENTER = (WIDTH / 2, HEIGHT / 2)
 
+class unit ():
+    def __init__ (self, body, geom, rad, player):
+        self.body = body
+        self.geom = geoms
+        self.rad = rad
+        self.player = player
+
 def ode_to_pygame (x, y):
     return x * SCALE, HEIGHT - y * SCALE
 
@@ -32,32 +39,53 @@ def near_callback(args, geom1, geom2):
 
     world,contactgroup = args
     for c in contacts:
-        c.setBounce(0.2)
+        c.setBounce(0.4)
         c.setMu(5000)
         j = ode.ContactJoint(world, contactgroup, c)
         j.attach(geom1.getBody(), geom2.getBody())
 
+def closest (u0):
+    x0, y0, z0 = u0.body.getPosition ()
+
+    best_u = None
+    best_dist = sys.maxint
+
+    for u1 in units:
+        if u1 != u0:
+            x1, y1, z1 = u1.body.getPosition ()
+            dist = math.hypot (x0 - x1, y0 - y1)
+            if dist < best_dist:
+                best_u = u1
+                best_dist = dist
+
+    return best_u
+
 def draw ():
     screen.fill ((0, 0, 0))
 
-    for b in bodies:
-        x, y, z = b.getPosition ()
+    for u in units:
+        x, y, z = u.body.getPosition ()
         coords = ode_to_pygame (x, y)
         p = [coords[0], coords[1]]
         for i in range (len (coords)):
             p[i] = int (p[i])
-        pygame.draw.circle (screen, (55, 0, 200), p, int (b.rad * SCALE), 0)
+        pygame.draw.circle (screen, (55, 0, 200), p, int (u.rad * SCALE), 0)
 
     if pygame.mouse.get_pressed ()[0]:
-        x0, y0, z0 = bodies[0].getPosition ()
-        x1, y1, z1 = bodies[1].getPosition ()
-        
+        other = closest (player)
+
+        px, py, pz = player.body.getPosition ()
+        ux, uy, uz = other.body.getPosition ()
+
         pygame.draw.line (screen, (0, 0, 255),
-                          ode_to_pygame (x0, y0), ode_to_pygame (x1, y1))
+                          ode_to_pygame (px, py),
+                          ode_to_pygame (ux, uy))
         
     pygame.display.flip ()
 
 def process_input ():
+    global paused
+
     for event in pygame.event.get ():
         if event.type == pygame.QUIT:
             pygame.quit ()
@@ -66,21 +94,26 @@ def process_input ():
             if event.key == pygame.K_ESCAPE:
                 pygame.quit ()
                 sys.exit ()
+            elif event.key == pygame.K_p:
+                paused = (paused + 1) % 2
+
 def controls ():
     mpos = pygame.mouse.get_pos ()
     mpos = pygame_to_ode (mpos[0], mpos[1])
     rel = (mpos[0] - .5, mpos[1] - .5)
     pf = (50 * rel[0], 50 * rel[1], 0)
-    bodies[0].addForce (pf)
+    player.body.addForce (pf)
     pygame.mouse.set_pos (CENTER)
 
 
     if pygame.mouse.get_pressed ()[0]:
-        upos = bodies[1].getPosition ()
-        ppos = bodies[0].getPosition ()
+        other = closest (player)
+
+        ppos = player.body.getPosition ()
+        opos = other.body.getPosition ()
         
-        dx = float (upos[0] - ppos[0])
-        dy = float (upos[1] - ppos[1])
+        dx = float (opos[0] - ppos[0])
+        dy = float (opos[1] - ppos[1])
 
         r, t = rect_to_pol (dx, dy)
         r -= .1
@@ -88,9 +121,9 @@ def controls ():
 
         k = 20
         pf = (k * dx, k * dy, 0)
-        bodies[0].addForce (pf)
-        uf = (-k * dx, -k * dy, 0)
-        bodies[1].addForce (uf)
+        player.body.addForce (pf)
+        of = (-k * dx, -k * dy, 0)
+        other.body.addForce (of)
 
 pygame.init ()
 screen = pygame.display.set_mode ((WIDTH, HEIGHT))
@@ -106,37 +139,51 @@ wall2 = ode.GeomPlane (space, (1, 0, 0), 0)
 wall3 = ode.GeomPlane (space, (-1, 0, 0), -1)
 bodies = []
 geoms = []
+units = []
 contactgroup = ode.JointGroup ()
 
-body0 = ode.Body (world)
+body = ode.Body (world)
 m = ode.Mass ()
-body0.rad = .025
-m.setSphere (2500, body0.rad)
-body0.setMass (m)
-body0.setPosition ((.5, .5, 0))
-bodies.append (body0)
-geom = ode.GeomSphere (space, body0.rad)
-geom.setBody (body0)
+rad = .025
+m.setSphere (2500, rad)
+body.setMass (m)
+body.setPosition ((.5, .5, 0))
+bodies.append (body)
+geom = ode.GeomSphere (space, rad)
+geom.setBody (body)
 geoms.append (geom)
+player = unit (body, geom, rad, True)
+units.append (player)
 
-body1 = ode.Body (world)
+body = ode.Body (world)
 m = ode.Mass ()
-body1.rad = .01
-m.setSphere (25000, body1.rad)
-body1.setMass (m)
-body1.setPosition ((.8, .8, 0))
-bodies.append (body1)
-geom = ode.GeomSphere (space, body1.rad)
-geom.setBody (body1)
+rad = .01
+m.setSphere (25000, rad)
+body.setMass (m)
+body.setPosition ((.8, .8, 0))
+bodies.append (body)
+geom = ode.GeomSphere (space, rad)
+geom.setBody (body)
 geoms.append (geom)
+units.append (unit (body, geom, rad, False))
 
-# j0 = ode.BallJoint (world)
-# j0.attach (body0, body1)
-# j0.setAnchor ((.5, .5, .5))
+body = ode.Body (world)
+m = ode.Mass ()
+rad = .01
+m.setSphere (25000, rad)
+body.setMass (m)
+body.setPosition ((.3, .3, 0))
+bodies.append (body)
+geom = ode.GeomSphere (space, rad)
+geom.setBody (body)
+geoms.append (geom)
+units.append (unit (body, geom, rad, False))
 
 fps = 60
 dt = 1.0 / fps
 lasttime = time.time ()
+
+paused = False
 
 while True:
     t = dt - (time.time () - lasttime)
@@ -144,14 +191,16 @@ while True:
         time.sleep (t)
 
     process_input ()
-    controls ()
 
-    phys_steps = 10
+    if not paused:
+        controls ()
 
-    for i in range (phys_steps):
-        space.collide ((world, contactgroup), near_callback)
-        world.step (dt / phys_steps)
-        contactgroup.empty ()
+        phys_steps = 10
+
+        for i in range (phys_steps):
+            space.collide ((world, contactgroup), near_callback)
+            world.step (dt / phys_steps)
+            contactgroup.empty ()
 
     draw ()
     lasttime = time.time ()

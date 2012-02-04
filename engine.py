@@ -3,11 +3,11 @@
 import pygame, ode, time, sys, math
 
 SCALE = 800
-
 WIDTH = SCALE
 HEIGHT = SCALE
-
 CENTER = (WIDTH / 2, HEIGHT / 2)
+
+STICKY = False
 
 class unit ():
     def __init__ (self, body, geom, rad, player):
@@ -44,6 +44,18 @@ def near_callback(args, geom1, geom2):
         j = ode.ContactJoint(world, contactgroup, c)
         j.attach(geom1.getBody(), geom2.getBody())
 
+def new_tar ():
+    global target
+
+    other = closest (player)
+
+    if calc_dist (player, other) < .6:
+        tar = other    
+    else:
+        tar = None
+
+    return tar
+
 def closest (u0):
     x0, y0, z0 = u0.body.getPosition ()
 
@@ -52,8 +64,7 @@ def closest (u0):
 
     for u1 in units:
         if u1 != u0:
-            x1, y1, z1 = u1.body.getPosition ()
-            dist = math.hypot (x0 - x1, y0 - y1)
+            dist = calc_dist (u0, u1)
             if dist < best_dist:
                 best_u = u1
                 best_dist = dist
@@ -71,20 +82,24 @@ def draw ():
             p[i] = int (p[i])
         pygame.draw.circle (screen, (55, 0, 200), p, int (u.rad * SCALE), 0)
 
-    if pygame.mouse.get_pressed ()[0]:
-        other = closest (player)
-
+    if target:
         px, py, pz = player.body.getPosition ()
-        ux, uy, uz = other.body.getPosition ()
+        tx, ty, tz = target.body.getPosition ()
 
         pygame.draw.line (screen, (0, 0, 255),
                           ode_to_pygame (px, py),
-                          ode_to_pygame (ux, uy))
+                          ode_to_pygame (tx, ty))
         
     pygame.display.flip ()
 
+def calc_dist (unit0, unit1):
+    u0pos = unit0.body.getPosition ()
+    u1pos = unit1.body.getPosition ()
+
+    return math.hypot (u0pos[0] - u1pos[0], u0pos[1] - u1pos[1])
+
 def process_input ():
-    global paused
+    global paused, target
 
     for event in pygame.event.get ():
         if event.type == pygame.QUIT:
@@ -96,8 +111,14 @@ def process_input ():
                 sys.exit ()
             elif event.key == pygame.K_p:
                 paused = (paused + 1) % 2
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            target = new_tar ()
+        elif event.type == pygame.MOUSEBUTTONUP:
+            target = None
 
 def controls ():
+    global target
+
     mpos = pygame.mouse.get_pos ()
     mpos = pygame_to_ode (mpos[0], mpos[1])
     rel = (mpos[0] - .5, mpos[1] - .5)
@@ -105,25 +126,27 @@ def controls ():
     player.body.addForce (pf)
     pygame.mouse.set_pos (CENTER)
 
+    if target:
+        if calc_dist (player, target) < .8:
+            ppos = player.body.getPosition ()
+            tpos = target.body.getPosition ()
+            
+            dx = float (tpos[0] - ppos[0])
+            dy = float (tpos[1] - ppos[1])
 
-    if pygame.mouse.get_pressed ()[0]:
-        other = closest (player)
+            r, t = rect_to_pol (dx, dy)
+            r -= .15
+            dx, dy = pol_to_rect (r, t)
 
-        ppos = player.body.getPosition ()
-        opos = other.body.getPosition ()
-        
-        dx = float (opos[0] - ppos[0])
-        dy = float (opos[1] - ppos[1])
-
-        r, t = rect_to_pol (dx, dy)
-        r -= .1
-        dx, dy = pol_to_rect (r, t)
-
-        k = 20
-        pf = (k * dx, k * dy, 0)
-        player.body.addForce (pf)
-        of = (-k * dx, -k * dy, 0)
-        other.body.addForce (of)
+            k = 20
+            pf = (k * dx, k * dy, 0)
+            player.body.addForce (pf)
+            tf = (-k * dx, -k * dy, 0)
+            target.body.addForce (tf)
+        else:
+            target = None
+    elif pygame.mouse.get_pressed ()[0] and STICKY:
+        target = new_tar ()
 
 pygame.init ()
 screen = pygame.display.set_mode ((WIDTH, HEIGHT))
@@ -184,6 +207,7 @@ dt = 1.0 / fps
 lasttime = time.time ()
 
 paused = False
+target = None
 
 while True:
     t = dt - (time.time () - lasttime)
